@@ -1,0 +1,1180 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IMI Practical Assessment Tasks Tracker</title>
+  <!-- Bootstrap CSS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f7f9fc;
+      padding-bottom: 60px;
+    }
+    .header {
+      background-color: #3e4684;
+      color: white;
+      padding: 20px 0;
+      margin-bottom: 30px;
+    }
+    .card {
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      margin-bottom: 25px;
+      overflow: hidden;
+      border: none;
+    }
+    .card-header {
+      background-color: #4a56b3;
+      color: white;
+      font-weight: 600;
+      padding: 15px 20px;
+    }
+    .task-card {
+      transition: transform 0.2s;
+      cursor: pointer;
+    }
+    .task-card:hover {
+      transform: translateY(-5px);
+    }
+    .task-complete {
+      border-left: 5px solid #28a745;
+    }
+    .task-progress {
+      border-left: 5px solid #ffc107;
+    }
+    .milestone-item {
+      padding: 15px;
+      border-bottom: 1px solid #eee;
+    }
+    .milestone-item:last-child {
+      border-bottom: none;
+    }
+    .photo-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .photo-preview {
+      width: 150px;
+      height: 150px;
+      object-fit: cover;
+      border-radius: 5px;
+      border: 1px solid #ddd;
+    }
+    .fa-check-circle {
+      color: #28a745;
+    }
+    .fa-clock {
+      color: #ffc107;
+    }
+    .floating-button {
+      position: fixed;
+      right: 30px;
+      bottom: 30px;
+      z-index: 100;
+    }
+    .download-all-btn {
+      background-color: #3e4684;
+      border-color: #3e4684;
+    }
+    .download-all-btn:hover {
+      background-color: #32396a;
+      border-color: #32396a;
+    }
+    #notificationToast {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 1050;
+    }
+    .task-info {
+      font-size: 0.9rem;
+      margin-bottom: 5px;
+    }
+    .btn-photo {
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-photo input[type=file] {
+      position: absolute;
+      font-size: 100px;
+      opacity: 0;
+      right: 0;
+      top: 0;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="container">
+      <div class="row align-items-center">
+        <div class="col">
+          <h1><i class="fas fa-clipboard-check me-2"></i>IMI Motorsport Assessment Tasks</h1>
+          <p class="mb-0">Track your progress and document each assessment task</p>
+          <p class="small text-light mt-2">Document technical data, measurements, and each step of your assessment with photos and notes</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="row mb-4">
+      <div class="col-md-6">
+        <div class="input-group">
+          <input type="text" id="learnerName" class="form-control" placeholder="Enter your name">
+          <button class="btn btn-primary" id="saveLearnerInfo">Save</button>
+        </div>
+      </div>
+      <div class="col-md-6 text-end">
+        <span id="savedInfo" class="text-success" style="display: none;">
+          <i class="fas fa-user-check"></i> Information saved
+        </span>
+      </div>
+    </div>
+
+    <div class="row mb-4">
+      <div class="col">
+        <h2>Your Assessment Tasks</h2>
+        <p>Click on a task to view details, add notes and photos</p>
+        
+        <div class="mb-4">
+          <div class="btn-group">
+            <button class="btn btn-outline-primary active" data-filter="all">All Tasks</button>
+            <button class="btn btn-outline-primary" data-filter="MS0102S">Health & Safety</button>
+            <button class="btn btn-outline-primary" data-filter="MS4S">Hand Skills</button>
+            <button class="btn btn-outline-primary" data-filter="MS56">Mechanical Tasks</button>
+            <button class="btn btn-outline-primary" data-filter="MS57">Race Inspection</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row" id="tasksContainer">
+      <!-- Tasks will be loaded here dynamically -->
+    </div>
+
+    <!-- Task Details Modal -->
+    <div class="modal fade" id="taskModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Task Details</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div id="taskDetails"></div>
+            
+            <!-- Task Status Section -->
+            <div class="card mt-3">
+              <div class="card-header">
+                Task Status
+              </div>
+              <div class="card-body">
+                <div class="task-status mb-3">
+                  <select class="form-select" id="taskStatus">
+                    <option value="not_started">Not Started</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="completed">Completed</option>
+                  </select>
+                </div>
+                <div id="crossReferenceInfo" class="alert alert-info" style="display: none;">
+                  <i class="fas fa-link me-2"></i>This is a core unit that can be cross-referenced with practical tasks. Evidence from other tasks can be used to satisfy these requirements.
+                </div>
+                <div id="assessmentCriteriaList" style="display: none;">
+                  <h6 class="mt-3">Assessment Criteria:</h6>
+                  <ul class="list-group mb-3" id="criteriaList">
+                    <!-- Criteria will be populated here -->
+                  </ul>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Task Notes Section -->
+            <div class="card mt-3">
+              <div class="card-header">
+                Your Notes
+              </div>
+              <div class="card-body">
+                <textarea id="taskNotes" class="form-control" rows="4" placeholder="Add your notes about the overall task here. Include any observations, challenges encountered, and troubleshooting steps..."></textarea>
+              </div>
+            </div>
+            
+            <!-- Milestones Section -->
+            <div class="card mt-3" id="milestonesCard">
+              <div class="card-header">
+                Required Documentation Photos
+              </div>
+              <div class="card-body p-0" id="milestonesContainer">
+                <!-- Milestones will be populated here -->
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <button type="button" class="btn btn-success" id="saveTask">Save Task</button>
+            <button type="button" class="btn btn-info" id="downloadPdf">Download as PDF</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating Download All Button -->
+  <div class="floating-button">
+    <button class="btn btn-primary download-all-btn" id="downloadAllBtn">
+      <i class="fas fa-download me-2"></i>Download All Tasks
+    </button>
+  </div>
+
+  <!-- Toast Notification -->
+  <div class="toast" role="alert" aria-live="assertive" aria-atomic="true" id="notificationToast" data-bs-delay="3000">
+    <div class="toast-header">
+      <strong class="me-auto"><i class="fas fa-info-circle me-2"></i>Notification</strong>
+      <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+    <div class="toast-body" id="toastMessage">
+      Action completed successfully!
+    </div>
+  </div>
+
+  <!-- Bootstrap Bundle with Popper -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+  <!-- PDF.js for PDF generation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <!-- html2canvas for capturing elements to PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  
+  <script>
+    // Tasks data loaded from IMI Skills Record Sheets
+    const assessmentTasks = [
+      {
+        id: 1,
+        title: "MS0102S - Health, Safety and Good Housekeeping",
+        request: "Demonstrate health, safety and good housekeeping practices",
+        techData: "PPE requirements, Safety procedures, Workplace policies",
+        description: "Select and use appropriate PPE, perform effective housekeeping, identify hazards, follow workplace policies.",
+        photos: "Photo showing selection and use of appropriate PPE (eye, ear, head, skin, feet, hands, lungs protection), Photo of vehicle protective equipment being used, Photo showing use of appropriate cleaning equipment, Photo demonstrating economical use of utilities and consumables, Photo of properly cleaned work area free from debris, Photo showing proper storage of tools and equipment, Photo of proper disposal of waste materials according to regulations, Photo showing identification of workplace hazard, Photo demonstrating safe working practice, Photo of proper personal presentation in the workplace",
+        status: "not_started",
+        unitRef: "MS0102S",
+        canCrossReference: true,
+        assessmentCriteria: [
+          "1.1 Select and use personal protective equipment",
+          "1.2 Select and use vehicle protective equipment",
+          "2.1 Select and use appropriate cleaning equipment",
+          "2.2 Use utilities and consumables without waste",
+          "2.3 Perform cleaning following workplace policies",
+          "2.4 Perform housekeeping safely",
+          "2.5 Keep work area clean and free from debris",
+          "2.6 Keep tools clean and tidy",
+          "2.7 Dispose of waste properly",
+          "3.1 Identify responsible persons for health and safety",
+          "3.2 Identify and report hazards",
+          "3.3 Carry out safe working practices",
+          "3.4 Rectify health and safety risks within job role",
+          "4.1 Show personal conduct that ensures safety",
+          "4.2 Display suitable personal presentation"
+        ]
+      },
+      {
+        id: 2,
+        title: "MS4S - Hand Skills (Fabrication Task)",
+        request: "Fabricate an item from suitable materials to known tolerances",
+        techData: "Material specifications, Measurement tolerances, Tool requirements",
+        description: "Demonstrate filing, tapping threads, cutting, drilling and joining. Select and use appropriate tools, measuring devices, and materials.",
+        photos: "Photo showing selection of appropriate hand tools, Photo of measuring devices being used (showing calibration if relevant), Photo showing proper PPE being worn, Photo of electrical measuring tools being used safely, Photo showing safe use of workshop equipment, Photo demonstrating understanding of safe working load, Photo showing proper tool storage, Photo of material selection for fabrication, Photo demonstrating filing technique, Photo showing tapping threads, Photo of cutting process (plastics/metals), Photo of drilling process (plastics/metals), Photo showing joining/fitting techniques, Photo of gaskets/seals/sealants being used, Photo showing proper use of fasteners, Photo of completed fabrication with measurements",
+        status: "not_started",
+        unitRef: "MS4S",
+        canCrossReference: true,
+        assessmentCriteria: [
+          "1.1 Select, maintain and use hand tools safely",
+          "1.2 Select, maintain and use measuring devices safely",
+          "1.3 Select, maintain and use suitable PPE",
+          "1.4 Select, maintain and use electrical measuring tools safely",
+          "2.1 Use workshop equipment safely",
+          "2.2 Interpret 'safe working load' correctly",
+          "2.3 Report faulty or damaged tools/equipment",
+          "2.4 Store tools/equipment safely and accessibly",
+          "3.1 Select and use appropriate materials",
+          "4.1 Use correct procedures for filing, tapping, cutting, drilling, fitting",
+          "4.2 Use appropriate fabrication techniques",
+          "4.3 Select and use gaskets, seals, sealants, fittings, fasteners",
+          "4.4 Apply techniques to electrical circuits",
+          "4.5 Select and use locking, fixing and fastening devices"
+        ]
+      },
+      {
+        id: 3,
+        title: "MS56.1S Task 1 - Engine Mechanical System",
+        request: "Remove and refit a camshaft",
+        techData: "Valve clearances, Cam securing bolt torque, Cam cover bolt torque",
+        description: "Time the engine, remove camshaft, check valve clearances, reassemble and test engine performance.",
+        photos: "Photo of safety precautions and PPE being used (cross-reference to MS0102S), Photo of tools and measuring devices selected (cross-reference to MS4S), Photo of timing marks correctly aligned before disassembly, Photo showing valve clearance specification documentation, Photo showing valve clearance measurement with feeler gauge (record actual measurements), Photo of torque specification for cam securing bolts (record spec), Photo of cam seals condition assessment, Photo of camshaft being removed safely, Photo of camshaft bearing surfaces inspection, Photo of camshaft being refitted with correct alignment, Photo showing torque wrench set to cam cover torque spec (record value), Photo of completed engine with cover refitted, Photo of running engine showing normal operation",
+        status: "not_started",
+        unitRef: "MS56.1S",
+        canCrossReference: false,
+        relatedUnits: ["MS0102S", "MS4S"]
+      },
+      {
+        id: 4,
+        title: "MS56.1S Task 2 - Cooling Systems",
+        request: "Remove and refit radiator",
+        techData: "Coolant capacity, Coolant type, Operating pressure",
+        description: "Drain coolant, remove radiator, replace with new unit, pressure test system.",
+        photos: "Photo of safety precautions and PPE being used (cross-reference to MS0102S), Photo of tools selected (cross-reference to MS4S), Photo of coolant type identification (record correct coolant type), Photo of coolant capacity specification (record total system capacity), Photo of drain container with amount of coolant removed (record actual volume), Photo of cooling system pressure specification (record max pressure), Photo of disconnected hoses and electrical connectors, Photo of radiator being safely removed, Photo of radiator mounting inspection, Photo of new radiator being installed, Photo of pressure tester attached to system, Photo of pressure gauge showing pressure test results (record actual pressure), Photo of correct coolant mixture being added, Photo of completed system with no leaks",
+        status: "not_started",
+        unitRef: "MS56.1S",
+        canCrossReference: false,
+        relatedUnits: ["MS0102S", "MS4S"]
+      },
+      {
+        id: 5,
+        title: "MS56.1S Task 3 - Air Supply & Exhaust System",
+        request: "Remove and refit air filter housing / exhaust manifold or section",
+        techData: "Bolt torque figures, Gasket specifications",
+        description: "Remove exhaust manifold/air filter housing, check for leaks and damage, replace gaskets as needed.",
+        photos: "Photo of safety precautions and PPE being used (cross-reference to MS0102S), Photo of tools selected (cross-reference to MS4S), Photo of exhaust manifold bolt torque specifications (record values), Photo of air filter housing fastener specifications, Photo of air filter housing being removed safely, Photo showing condition assessment of air filter, Photo of exhaust manifold being removed safely, Photo showing condition of exhaust manifold gasket, Photo showing condition of manifold and mating surface, Photo of new gasket being correctly positioned, Photo of torque wrench set to correct value for manifold bolts, Photo of manifold bolts being tightened in correct sequence, Photo of reassembled air filter housing, Photo of completed system with no leaks when engine running",
+        status: "not_started",
+        unitRef: "MS56.1S",
+        canCrossReference: false,
+        relatedUnits: ["MS0102S", "MS4S"]
+      },
+      {
+        id: 6,
+        title: "MS56.1S Task 5 - Oil Pump",
+        request: "Remove and refit the oil pump",
+        techData: "Oil pump specifications, Torque settings, Oil pressure specifications",
+        description: "Remove oil pump, inspect components, refit and verify correct operation and oil pressure.",
+        photos: "Photo of safety precautions and PPE being used (cross-reference to MS0102S), Photo of tools selected (cross-reference to MS4S), Photo of oil pump specifications and location in service manual, Photo showing oil drainage (record volume removed), Photo showing removal of necessary components for access, Photo of oil pump mounting bolts being removed, Photo of oil pump being removed, Photo showing inspection of pump gears/rotors, Photo showing inspection of pump housing, Photo showing measurement of clearances if applicable (record values), Photo of new gaskets/seals being fitted, Photo of oil pump being refitted, Photo of torque wrench set to specification, Photo showing torquing sequence being followed, Photo of oil level being checked after refill, Photo showing oil pressure verification after startup",
+        status: "not_started",
+        unitRef: "MS56.1S",
+        canCrossReference: false,
+        relatedUnits: ["MS0102S", "MS4S"]
+      },
+      {
+        id: 7,
+        title: "MS56.2S Task 1 - Steering Arm Ball Joint",
+        request: "Remove and replace steering arm ball joint",
+        techData: "Torque specifications, Ball joint inspection criteria",
+        description: "Remove and replace steering ball joint, check for wear, ensure correct torque and operation.",
+        photos: "Photo of safety precautions and PPE being used (cross-reference to MS0102S), Photo of tools selected (cross-reference to MS4S), Photo of vehicle raised and supported safely, Photo of ball joint specifications in service manual, Photo showing wheel removal, Photo showing cotter pin/lock device removal, Photo of ball joint separator tool being used correctly, Photo of ball joint being removed, Photo showing inspection of ball joint for wear or damage, Photo showing preparation of new ball joint, Photo of ball joint being installed, Photo showing torque wrench set to specification, Photo of ball joint being torqued to spec, Photo showing new cotter pin/lock device installation, Photo of wheel reinstalled with correct torque, Photo of completed steering system, Photo showing steering function check after repair",
+        status: "not_started",
+        unitRef: "MS56.2S",
+        canCrossReference: false,
+        relatedUnits: ["MS0102S", "MS4S"]
+      },
+      {
+        id: 8,
+        title: "MS56.2S Task 2 - Suspension",
+        request: "Remove and refit suspension strut/suspension spring",
+        techData: "Torque settings, Spring compression procedure, Alignment specifications",
+        description: "Remove suspension components, check for wear, replace and ensure correct alignment and torque.",
+        photos: "Photo of safety precautions and PPE being used (cross-reference to MS0102S), Photo of tools selected (cross-reference to MS4S), Photo of vehicle raised and supported safely, Photo of suspension component specifications in manual, Photo showing wheel removal, Photo showing vehicle weight properly supported, Photo of spring compressor correctly installed (if applicable), Photo of strut top mount hardware removal, Photo of strut lower mounting bolt removal, Photo of strut/spring being safely removed, Photo showing inspection of components, Photo of strut/spring being prepared for installation, Photo showing new components being fitted, Photo of strut being reinstalled in vehicle, Photo of torque wrench set to specification, Photo showing torque application to mounting bolts, Photo of wheel reinstalled with correct torque, Photo showing suspension height/alignment verification",
+        status: "not_started",
+        unitRef: "MS56.2S",
+        canCrossReference: false,
+        relatedUnits: ["MS0102S", "MS4S"]
+      },
+      {
+        id: 9,
+        title: "MS56.2S Task 3 - Braking System",
+        request: "Remove/refit caliper, brake pads & discs. Perform brake bleeding",
+        techData: "Brake caliper bolt torque, Minimum disc thickness, Bleeding procedure",
+        description: "Remove and replace brake components, bleed system, check for proper operation.",
+        photos: "Photo of safety precautions and PPE being used (cross-reference to MS0102S), Photo of tools selected (cross-reference to MS4S), Photo of brake caliper bolt torque specification (record correct value), Photo of minimum disc thickness specification (record value), Photo of micrometer measuring actual disc thickness (record measured value), Photo of brake fluid type specification, Photo of wheel being safely removed, Photo of caliper being safely removed, Photo of brake pads being removed, Photo of brake disc being removed, Photo showing condition assessment of components, Photo of new disc being installed, Photo of new pads being installed, Photo of torque wrench set to caliper bolt specification, Photo of caliper being reinstalled and bolts torqued, Photo showing brake bleeding equipment setup, Photo of brake bleeding process showing clear fluid, Photo of brake pedal test showing firm pedal, Photo of completed system, Photo of proper disposal of old brake fluid",
+        status: "not_started",
+        unitRef: "MS56.2S",
+        canCrossReference: false,
+        relatedUnits: ["MS0102S", "MS4S"]
+      },
+      {
+        id: 10,
+        title: "MS56.3S Task 1 - Starter Motor",
+        request: "Remove and refit starter motor",
+        techData: "Torque specifications, Electrical specifications, Testing procedure",
+        description: "Remove starter motor, perform basic checks, refit and test for proper operation.",
+        photos: "Photo of safety precautions and PPE being used (cross-reference to MS0102S), Photo of tools selected (cross-reference to MS4S), Photo showing battery disconnection safety procedure, Photo of starter motor specifications in service manual, Photo showing location and access to starter motor, Photo of electrical connections being safely disconnected, Photo showing labeling of wires if needed, Photo of mounting bolts being removed, Photo of starter motor being safely removed, Photo showing inspection of starter motor (brushes, commutator), Photo showing inspection of flywheel teeth if accessible, Photo of starter motor being reinstalled, Photo of mounting bolts being torqued to specification, Photo of electrical connections being properly reconnected, Photo showing battery reconnection, Photo of testing procedure, Photo showing proper starter operation after installation",
+        status: "not_started",
+        unitRef: "MS56.3S",
+        canCrossReference: false,
+        relatedUnits: ["MS0102S", "MS4S"]
+      },
+      {
+        id: 11,
+        title: "MS56.3S Task 2 - Alternator",
+        request: "Remove and refit alternator",
+        techData: "Battery voltage, Charging voltage, Belt tension",
+        description: "Test charging system, remove and replace alternator, tension belt, verify operation.",
+        photos: "Photo of safety precautions and PPE being used (cross-reference to MS0102S), Photo of tools selected (cross-reference to MS4S), Photo of multimeter measuring battery voltage with engine off (record actual voltage - should be 12.2-12.6V), Photo of multimeter measuring charging voltage with engine running (record actual voltage - should be 13.8-14.8V), Photo showing how to identify a faulty alternator, Photo of belt tensioner specification (record correct tension value), Photo of belt being safely removed, Photo of alternator electrical connections being safely disconnected, Photo of alternator mounting bolts being removed, Photo of alternator being safely removed, Photo of new alternator being installed, Photo of electrical connections being properly reconnected, Photo of belt tensioner tool being used to set correct tension, Photo of completed installation, Photo of multimeter showing correct charging voltage after repair",
+        status: "not_started",
+        unitRef: "MS56.3S",
+        canCrossReference: false,
+        relatedUnits: ["MS0102S", "MS4S"]
+      },
+      {
+        id: 12,
+        title: "MS56.3S Task 3 - Lighting Systems",
+        request: "Remove and refit headlight unit/headlight bulb/indicator side repeater bulb",
+        techData: "Bulb specifications, Headlight adjustment procedure",
+        description: "Remove and replace lighting components, check operation, adjust headlights if needed.",
+        photos: "Photo of safety precautions and PPE being used (cross-reference to MS0102S), Photo of tools selected (cross-reference to MS4S), Photo of bulb specification in service manual, Photo showing battery disconnection if required, Photo showing access to headlight unit/bulb, Photo of headlight unit mounting hardware, Photo showing careful removal of headlight unit, Photo showing electrical connector disconnection, Photo of bulb removal showing proper technique (no touching glass), Photo showing inspection of connections for corrosion, Photo of new bulb being installed with proper handling, Photo of headlight unit being reinstalled, Photo showing proper connection of electrical connectors, Photo of side repeater bulb access method, Photo of side repeater bulb being removed, Photo of new side repeater bulb installation, Photo showing testing of all lights after repair, Photo of headlight aim adjustment procedure if performed",
+        status: "not_started",
+        unitRef: "MS56.3S",
+        canCrossReference: false,
+        relatedUnits: ["MS0102S", "MS4S"]
+      },
+      {
+        id: 13,
+        title: "MS56.3S Task 5 - DC Power Supply System",
+        request: "Remove and refit components from a direct current power supply system",
+        techData: "Circuit diagrams, Component specifications, Testing procedures",
+        description: "Remove and replace DC power system components (fuses, relays, switches, etc.), test operation.",
+        photos: "Photo of safety precautions and PPE being used (cross-reference to MS0102S), Photo of tools selected (cross-reference to MS4S), Photo of circuit diagram for the component being replaced, Photo showing battery disconnection safety procedure, Photo showing identification of component to be replaced, Photo showing proper use of multimeter to test circuit, Photo showing access to component (removal of covers/panels), Photo of component being removed, Photo showing inspection of connections and wiring, Photo of replacement component and verification of specifications, Photo showing installation of new component, Photo showing proper reconnection of electrical connections, Photo showing battery reconnection, Photo of testing procedure to verify component operation, Photo showing proper reassembly of any removed panels/covers",
+        status: "not_started",
+        unitRef: "MS56.3S",
+        canCrossReference: false,
+        relatedUnits: ["MS0102S", "MS4S"]
+      },
+      {
+        id: 14,
+        title: "MS56.4S Task 1 - Clutch",
+        request: "Remove and refit clutch (measured)",
+        techData: "Clutch alignment procedure, Torque specifications, Measurement procedures",
+        description: "Remove transmission, replace clutch, measure components, reassemble with correct alignment.",
+        photos: "Photo of safety precautions and PPE being used (cross-reference to MS0102S), Photo of tools selected (cross-reference to MS4S), Photo of clutch component specifications in service manual, Photo of flywheel and clutch bolt torque specifications (record values), Photo of vehicle safely raised and supported, Photo showing transmission access preparation, Photo of driveshaft/propshaft being safely disconnected, Photo showing hydraulic line disconnection if applicable, Photo of transmission being safely supported, Photo of transmission mounting bolts being removed, Photo of transmission being safely separated from engine, Photo of clutch being removed, Photo showing measurement of clutch disc thickness (record value), Photo showing measurement of flywheel runout if required (record value), Photo showing clutch alignment tool being used, Photo of new clutch being installed in correct orientation, Photo of torque wrench set to clutch bolt specification, Photo of clutch bolts being torqued in correct sequence, Photo of transmission being properly aligned during reinstallation, Photo of completed installation",
+        status: "not_started",
+        unitRef: "MS56.4S",
+        canCrossReference: false,
+        relatedUnits: ["MS0102S", "MS4S"]
+      },
+      {
+        id: 15,
+        title: "MS56.4S Task 2 - Gearbox",
+        request: "Remove and refit a gearbox unit",
+        techData: "Torque specifications, Fluid specifications, Alignment procedure",
+        description: "Remove transmission, inspect, refill with correct fluid, reinstall and test operation.",
+        photos: "Photo of safety precautions and PPE being used (cross-reference to MS0102S), Photo of tools selected (cross-reference to MS4S), Photo of gearbox specifications in service manual, Photo of fluid type and capacity specifications (record values), Photo of vehicle safely raised and supported, Photo showing drain plug location, Photo of fluid being drained (record amount and condition), Photo showing disconnection of external linkages/connectors, Photo showing driveshaft/propshaft disconnection, Photo of transmission being safely supported, Photo of transmission mounting bolts being removed, Photo of transmission being safely removed, Photo showing inspection of clutch if applicable, Photo showing inspection of input/output shaft seals, Photo of transmission being prepared for reinstallation, Photo of transmission being correctly aligned during reinstallation, Photo of mounting bolts being torqued to specification, Photo showing reconnection of driveshaft/propshaft, Photo showing reconnection of linkages/connectors, Photo of new fluid being added (correct type and amount), Photo showing final inspection and leak check",
+        status: "not_started",
+        unitRef: "MS56.4S",
+        canCrossReference: false,
+        relatedUnits: ["MS0102S", "MS4S"]
+      },
+      {
+        id: 16,
+        title: "MS56.4S Task 3 - Driveline",
+        request: "Remove and refit driveshaft or hub unit or drive line coupling",
+        techData: "Torque specifications, Bearing inspection criteria, Joint inspection procedure",
+        description: "Remove driveshaft/hub/coupling, inspect components, reinstall with correct torque.",
+        photos: "Photo of safety precautions and PPE being used (cross-reference to MS0102S), Photo of tools selected (cross-reference to MS4S), Photo of component specifications in service manual, Photo of torque specifications for fasteners (record values), Photo of vehicle safely raised and supported, Photo showing wheel removal if necessary, Photo showing removal of securing devices (clips, pins, etc.), Photo of component being safely disconnected/removed, Photo showing proper support of components during removal, Photo showing inspection of removed component (CV joints, bearings, etc.), Photo showing inspection of mating surfaces, Photo of component preparation for reinstallation (cleaning, lubrication), Photo showing careful alignment during reinstallation, Photo of fasteners being installed, Photo of torque wrench set to specification, Photo showing torquing of fasteners to specification, Photo of safety devices being reinstalled (clips, pins, etc.), Photo of wheel being reinstalled if removed, Photo showing final inspection and operation check",
+        status: "not_started",
+        unitRef: "MS56.4S",
+        canCrossReference: false,
+        relatedUnits: ["MS0102S", "MS4S"]
+      },
+      {
+        id: 17,
+        title: "MS56.4S Task 4 - Final Drive",
+        request: "Remove and refit final drive unit (measure backlash)",
+        techData: "Backlash specifications, Torque specifications, Fluid specifications",
+        description: "Remove final drive, measure backlash, adjust if needed, refill with correct fluid, reinstall.",
+        photos: "Photo of safety precautions and PPE being used (cross-reference to MS0102S), Photo of tools selected (cross-reference to MS4S), Photo of final drive specifications in service manual, Photo of backlash specification (record value), Photo of fluid type and capacity specifications (record values), Photo of vehicle safely raised and supported, Photo showing drain plug location, Photo of fluid being drained (record amount and condition), Photo showing driveshaft/axle shaft disconnection, Photo showing support of final drive unit, Photo of final drive mounting fasteners being removed, Photo of final drive unit being safely removed, Photo showing access to ring and pinion gears, Photo showing backlash measurement technique with dial indicator, Photo of actual backlash measurement (record value), Photo showing any adjustments made if required, Photo of final drive being prepared for reinstallation, Photo of final drive being reinstalled, Photo of mounting bolts being torqued to specification, Photo showing reconnection of driveshafts/axle shafts, Photo of new fluid being added (correct type and amount), Photo showing final inspection and operation check",
+        status: "not_started",
+        unitRef: "MS56.4S",
+        canCrossReference: false,
+        relatedUnits: ["MS0102S", "MS4S"]
+      },
+      {
+        id: 18,
+        title: "MS57S - Race Inspection",
+        request: "Perform pre/during/post race inspection",
+        techData: "Inspection checklist, Safety requirements, Component specifications",
+        description: "Complete thorough vehicle inspections before, during, and after race events to ensure safety and compliance.",
+        photos: "Photo of safety precautions and PPE being used (cross-reference to MS0102S), Photo of tools selected (cross-reference to MS4S), Photo of inspection checklist/documentation, Photo showing pre-race tyre inspection (record pressures), Photo showing pre-race brake inspection, Photo showing pre-race fluid level checks, Photo showing pre-race safety equipment inspection, Photo showing pre-race fastener checks (wheels, suspension), Photo showing pre-race fuel system inspection, Photo of during-race inspection setup in pit area, Photo showing during-race quick check process, Photo showing during-race tyre inspection, Photo showing during-race damage assessment if applicable, Photo of post-race general vehicle condition, Photo showing post-race component inspection (brakes, suspension), Photo showing post-race fluid checks (leaks, levels), Photo showing post-race disassembly inspection if required, Photo of completed inspection documentation",
+        status: "not_started",
+        unitRef: "MS57S",
+        canCrossReference: false,
+        relatedUnits: ["MS0102S", "MS4S"]
+      }
+    ];
+
+    // Application state
+    let currentTaskId = null;
+    let learnerData = {
+      name: "",
+      tasks: []
+    };
+
+    // Initialize modal, toast and events
+    const taskModal = new bootstrap.Modal(document.getElementById('taskModal'));
+    const notificationToast = new bootstrap.Toast(document.getElementById('notificationToast'));
+
+    // Load user data from localStorage
+    function loadUserData() {
+      const savedData = localStorage.getItem('imiAssessmentData');
+      if (savedData) {
+        learnerData = JSON.parse(savedData);
+        document.getElementById('learnerName').value = learnerData.name;
+        if (learnerData.name) {
+          document.getElementById('savedInfo').style.display = 'inline-block';
+        }
+        
+        // Update task status from saved data
+        learnerData.tasks.forEach(savedTask => {
+          const taskIndex = assessmentTasks.findIndex(t => t.id === savedTask.id);
+          if (taskIndex !== -1) {
+            assessmentTasks[taskIndex].status = savedTask.status;
+            assessmentTasks[taskIndex].notes = savedTask.notes;
+            assessmentTasks[taskIndex].milestones = savedTask.milestones;
+          }
+        });
+      }
+      renderTasks();
+    }
+
+    // Save user data to localStorage
+    function saveUserData() {
+      localStorage.setItem('imiAssessmentData', JSON.stringify(learnerData));
+      showNotification('Your progress has been saved!');
+    }
+
+    // Render all tasks in the main view
+    function renderTasks() {
+      const container = document.getElementById('tasksContainer');
+      container.innerHTML = '';
+      
+      assessmentTasks.forEach(task => {
+        // Find if we have saved data for this task
+        const savedTask = learnerData.tasks.find(t => t.id === task.id);
+        const status = savedTask ? savedTask.status : task.status;
+        
+        let statusClass = '';
+        let statusIcon = '';
+        
+        if (status === 'completed') {
+          statusClass = 'task-complete';
+          statusIcon = '<i class="fas fa-check-circle me-2"></i>';
+        } else if (status === 'in_progress') {
+          statusClass = 'task-progress';
+          statusIcon = '<i class="fas fa-clock me-2"></i>';
+        }
+        
+        const taskCard = document.createElement('div');
+        taskCard.className = 'col-md-4';
+        taskCard.innerHTML = `
+          <div class="card task-card ${statusClass}" data-task-id="${task.id}">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <span>${statusIcon}Task ${task.id}</span>
+              <span class="badge ${status === 'completed' ? 'bg-success' : status === 'in_progress' ? 'bg-warning' : 'bg-secondary'}">
+                ${status === 'completed' ? 'Completed' : status === 'in_progress' ? 'In Progress' : 'Not Started'}
+              </span>
+            </div>
+            <div class="card-body">
+              <h5 class="card-title">${task.title}</h5>
+              <p class="card-text"><strong>Request:</strong> ${task.request}</p>
+              <button class="btn btn-primary btn-sm view-task">View Details</button>
+            </div>
+          </div>
+        `;
+        
+        container.appendChild(taskCard);
+        
+        // Add click event to the card
+        const viewBtn = taskCard.querySelector('.view-task');
+        viewBtn.addEventListener('click', () => {
+          openTaskDetails(task.id);
+        });
+      });
+      
+      // Add filter functionality
+      document.querySelectorAll('[data-filter]').forEach(button => {
+        button.addEventListener('click', function() {
+          // Update active button
+          document.querySelectorAll('[data-filter]').forEach(btn => btn.classList.remove('active'));
+          this.classList.add('active');
+          
+          const filterValue = this.getAttribute('data-filter');
+          
+          // Filter cards
+          document.querySelectorAll('.task-card').forEach(card => {
+            const taskId = parseInt(card.getAttribute('data-task-id'));
+            const task = assessmentTasks.find(t => t.id === taskId);
+            
+            if (filterValue === 'all' || task.unitRef.startsWith(filterValue)) {
+              card.parentElement.style.display = 'block';
+            } else {
+              card.parentElement.style.display = 'none';
+            }
+          });
+        });
+      });
+    }
+
+    // Open task details modal
+    function openTaskDetails(taskId) {
+      currentTaskId = taskId;
+      const task = assessmentTasks.find(t => t.id === taskId);
+      
+      // Get saved task data if exists
+      const savedTask = learnerData.tasks.find(t => t.id === taskId);
+      
+      const detailsContainer = document.getElementById('taskDetails');
+      detailsContainer.innerHTML = `
+        <h4>${task.title}</h4>
+        <div class="task-info"><strong>Customer Request:</strong> ${task.request}</div>
+        <div class="task-info"><strong>Technical Data Required:</strong> ${task.techData}</div>
+        <div class="task-info"><strong>Description & Recommendations:</strong> ${task.description}</div>
+        <div class="task-info mt-2"><strong>Unit Reference:</strong> ${task.unitRef}</div>
+        <div class="alert alert-info mt-2">
+          <i class="fas fa-info-circle me-2"></i>Remember to document all technical measurements and specifications as you work. Take clear photos at each significant step.
+        </div>
+      `;
+      
+      // Set task status from saved data
+      const taskStatusSelect = document.getElementById('taskStatus');
+      taskStatusSelect.value = savedTask ? savedTask.status : 'not_started';
+      
+      // Show cross-reference info if applicable
+      const crossReferenceInfo = document.getElementById('crossReferenceInfo');
+      if (task.canCrossReference) {
+        crossReferenceInfo.style.display = 'block';
+      } else {
+        crossReferenceInfo.style.display = 'none';
+      }
+      
+      // Show assessment criteria if available
+      const assessmentCriteriaList = document.getElementById('assessmentCriteriaList');
+      const criteriaList = document.getElementById('criteriaList');
+      
+      if (task.assessmentCriteria && task.assessmentCriteria.length > 0) {
+        criteriaList.innerHTML = '';
+        task.assessmentCriteria.forEach(criteria => {
+          const li = document.createElement('li');
+          li.className = 'list-group-item';
+          li.innerHTML = criteria;
+          criteriaList.appendChild(li);
+        });
+        assessmentCriteriaList.style.display = 'block';
+      } else {
+        assessmentCriteriaList.style.display = 'none';
+      }
+      
+      // Fill in saved notes if any
+      document.getElementById('taskNotes').value = savedTask && savedTask.notes ? savedTask.notes : '';
+      
+      // Parse photo suggestions and create milestone elements
+      const photoContainer = document.getElementById('milestonesContainer');
+      photoContainer.innerHTML = '';
+      
+      // Add related units info if available
+      if (task.relatedUnits && task.relatedUnits.length > 0) {
+        const relatedUnitsDiv = document.createElement('div');
+        relatedUnitsDiv.className = 'alert alert-secondary mb-3';
+        
+        const relatedUnitNames = task.relatedUnits.map(unitRef => {
+          const relatedTask = assessmentTasks.find(t => t.unitRef === unitRef);
+          return relatedTask ? relatedTask.title : unitRef;
+        }).join(', ');
+        
+        relatedUnitsDiv.innerHTML = `
+          <i class="fas fa-link me-2"></i><strong>Related Units:</strong> ${relatedUnitNames}
+          <div class="small mt-1">Health, safety and good housekeeping practices should be demonstrated throughout this task.</div>
+        `;
+        photoContainer.appendChild(relatedUnitsDiv);
+      }
+      
+      // Split the photos string into individual suggestions
+      const photoSuggestions = task.photos.split(', ');
+      
+      photoSuggestions.forEach((suggestion, index) => {
+        const milestoneData = savedTask && savedTask.milestones && savedTask.milestones[index] 
+          ? savedTask.milestones[index] 
+          : { note: '', photos: [] };
+        
+        const milestoneEl = document.createElement('div');
+        milestoneEl.className = 'milestone-item';
+        milestoneEl.innerHTML = `
+          <div class="d-flex justify-content-between align-items-start">
+            <div class="w-100">
+              <h6>${suggestion}</h6>
+              <div class="mb-2">
+                <textarea class="form-control milestone-note" placeholder="Add notes for this photo (e.g., actual measurements, observations)..." rows="2">${milestoneData.note || ''}</textarea>
+              </div>
+              <div class="btn-group">
+                <button class="btn btn-sm btn-outline-primary btn-photo">
+                  <i class="fas fa-camera me-1"></i>Add Photo
+                  <input type="file" class="milestone-photo-input" data-milestone="${index}" accept="image/*" multiple>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="photo-container" id="photoContainer${index}"></div>
+        `;
+        
+        photoContainer.appendChild(milestoneEl);
+        
+        // Add event listener for photo input
+        const photoInput = milestoneEl.querySelector('.milestone-photo-input');
+        photoInput.addEventListener('change', (e) => {
+          handlePhotoUpload(e, index);
+        });
+        
+        // Render existing photos if any
+        const photoContainerEl = milestoneEl.querySelector(`#photoContainer${index}`);
+        if (milestoneData.photos && milestoneData.photos.length > 0) {
+          milestoneData.photos.forEach(photo => {
+            const img = document.createElement('img');
+            img.src = photo;
+            img.className = 'photo-preview';
+            img.setAttribute('data-milestone', index);
+            
+            // Add delete button overlay
+            const wrapper = document.createElement('div');
+            wrapper.className = 'position-relative d-inline-block';
+            wrapper.innerHTML = `
+              <button class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1 delete-photo">
+                <i class="fas fa-times"></i>
+              </button>
+            `;
+            wrapper.prepend(img);
+            photoContainerEl.appendChild(wrapper);
+            
+            // Add delete event
+            const deleteBtn = wrapper.querySelector('.delete-photo');
+            deleteBtn.addEventListener('click', () => {
+              wrapper.remove();
+            });
+          });
+        }
+      });
+      
+      taskModal.show();
+    }
+
+    // Handle photo upload
+    function handlePhotoUpload(event, milestoneIndex) {
+      const files = event.target.files;
+      const photoContainer = document.getElementById(`photoContainer${milestoneIndex}`);
+      
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+          const img = document.createElement('img');
+          img.src = e.target.result;
+          img.className = 'photo-preview';
+          img.setAttribute('data-milestone', milestoneIndex);
+          
+          // Add delete button overlay
+          const wrapper = document.createElement('div');
+          wrapper.className = 'position-relative d-inline-block';
+          wrapper.innerHTML = `
+            <button class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1 delete-photo">
+              <i class="fas fa-times"></i>
+            </button>
+          `;
+          wrapper.prepend(img);
+          photoContainer.appendChild(wrapper);
+          
+          // Add delete event
+          const deleteBtn = wrapper.querySelector('.delete-photo');
+          deleteBtn.addEventListener('click', () => {
+            wrapper.remove();
+          });
+        };
+        
+        reader.readAsDataURL(file);
+      }
+    }
+
+    // Save task data
+    function saveTaskData() {
+      if (!currentTaskId) return;
+      
+      // Get current task data
+      const task = assessmentTasks.find(t => t.id === currentTaskId);
+      if (!task) return;
+      
+      // Get form values
+      const status = document.getElementById('taskStatus').value;
+      const notes = document.getElementById('taskNotes').value;
+      
+      // Get milestone data
+      const milestones = [];
+      const milestoneItems = document.querySelectorAll('.milestone-item');
+      
+      milestoneItems.forEach((item, index) => {
+        const note = item.querySelector('.milestone-note').value;
+        const photoEls = item.querySelectorAll('.photo-preview');
+        const photos = [];
+        
+        photoEls.forEach(photo => {
+          photos.push(photo.src);
+        });
+        
+        milestones.push({
+          note,
+          photos
+        });
+      });
+      
+      // Update task in assessmentTasks array
+      task.status = status;
+      
+      // Find if task exists in learnerData
+      const taskIndex = learnerData.tasks.findIndex(t => t.id === currentTaskId);
+      
+      // Update or add task data
+      const taskData = {
+        id: currentTaskId,
+        status,
+        notes,
+        milestones,
+        lastUpdated: new Date().toISOString()
+      };
+      
+      if (taskIndex !== -1) {
+        learnerData.tasks[taskIndex] = taskData;
+      } else {
+        learnerData.tasks.push(taskData);
+      }
+      
+      // Save to localStorage
+      saveUserData();
+      
+      // Update UI
+      renderTasks();
+      
+      // Close modal
+      taskModal.hide();
+    }
+
+    // Download task as PDF
+    function downloadTaskAsPdf() {
+      if (!currentTaskId) return;
+      
+      const task = assessmentTasks.find(t => t.id === currentTaskId);
+      if (!task) return;
+      
+      // Get saved task data
+      const savedTask = learnerData.tasks.find(t => t.id === currentTaskId);
+      if (!savedTask) {
+        showNotification('Please save the task first before downloading.', 'warning');
+        return;
+      }
+      
+      // Create a temporary div to render the PDF content
+      const tempDiv = document.createElement('div');
+      tempDiv.className = 'p-4';
+      tempDiv.innerHTML = `
+        <div class="text-center mb-3">
+          <h2>IMI Motorsport Assessment Task</h2>
+          <h3>${task.title}</h3>
+        </div>
+        
+        <div class="mb-4">
+          <p><strong>Learner:</strong> ${learnerData.name}</p>
+          <p><strong>Unit Reference:</strong> ${task.unitRef}</p>
+          <p><strong>Status:</strong> ${savedTask.status === 'completed' ? 'Completed' : savedTask.status === 'in_progress' ? 'In Progress' : 'Not Started'}</p>
+          <p><strong>Last Updated:</strong> ${new Date(savedTask.lastUpdated).toLocaleString()}</p>
+        </div>
+        
+        <div class="mb-4">
+          <h4>Task Details</h4>
+          <p><strong>Customer Request:</strong> ${task.request}</p>
+          <p><strong>Technical Data Required:</strong> ${task.techData}</p>
+          <p><strong>Description:</strong> ${task.description}</p>
+        </div>
+        
+        <div class="mb-4">
+          <h4>Learner Notes</h4>
+          <p>${savedTask.notes || 'No notes added.'}</p>
+        </div>
+      `;
+      
+      // Add assessment criteria if applicable
+      if (task.assessmentCriteria && task.assessmentCriteria.length > 0) {
+        const criteriaDiv = document.createElement('div');
+        criteriaDiv.className = 'mb-4';
+        criteriaDiv.innerHTML = '<h4>Assessment Criteria</h4><ul>';
+        
+        task.assessmentCriteria.forEach(criteria => {
+          criteriaDiv.innerHTML += `<li>${criteria}</li>`;
+        });
+        
+        criteriaDiv.innerHTML += '</ul>';
+        tempDiv.appendChild(criteriaDiv);
+      }
+      
+      // Add milestones
+      const photoSuggestions = task.photos.split(', ');
+      const milestonesDiv = document.createElement('div');
+      milestonesDiv.innerHTML = '<h4>Documentation Photos & Notes</h4>';
+      
+      savedTask.milestones.forEach((milestone, index) => {
+        const milestoneDiv = document.createElement('div');
+        milestoneDiv.className = 'mb-3 p-3 border rounded';
+        milestoneDiv.innerHTML = `
+          <h5>${photoSuggestions[index]}</h5>
+          <p>${milestone.note || 'No notes added.'}</p>
+          <div class="photo-grid"></div>
+        `;
+        
+        milestonesDiv.appendChild(milestoneDiv);
+        
+        // Add photos
+        const photoGrid = milestoneDiv.querySelector('.photo-grid');
+        if (milestone.photos && milestone.photos.length > 0) {
+          milestone.photos.forEach(photo => {
+            const img = document.createElement('img');
+            img.src = photo;
+            img.style.width = '150px';
+            img.style.height = 'auto';
+            img.style.margin = '5px';
+            photoGrid.appendChild(img);
+          });
+        } else {
+          photoGrid.innerHTML = '<p>No photos added.</p>';
+        }
+      });
+      
+      tempDiv.appendChild(milestonesDiv);
+      
+      // Add footer
+      const footerDiv = document.createElement('div');
+      footerDiv.className = 'mt-5 pt-3 border-top text-center';
+      footerDiv.innerHTML = `
+        <p>This document was generated from the IMI Motorsport Assessment Tasks App</p>
+        <p>Generated on: ${new Date().toLocaleString()}</p>
+      `;
+      tempDiv.appendChild(footerDiv);
+      
+      // Append to body temporarily (off-screen)
+      tempDiv.style.position = 'fixed';
+      tempDiv.style.top = '-9999px';
+      document.body.appendChild(tempDiv);
+      
+      // Generate PDF
+      const { jsPDF } = window.jspdf;
+      
+      html2canvas(tempDiv, {
+        scale: 1,
+        useCORS: true,
+        allowTaint: true
+      }).then(canvas => {
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        const imgWidth = canvas.width;
+        const imgHeight = canvas.height;
+        const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+        const imgX = (pdfWidth - imgWidth * ratio) / 2;
+        
+        let heightLeft = imgHeight;
+        let position = 0;
+        
+        pdf.addImage(imgData, 'PNG', imgX, position, imgWidth * ratio, imgHeight * ratio);
+        heightLeft -= pdfHeight;
+        
+        while (heightLeft >= 0) {
+          position = heightLeft - imgHeight;
+          pdf.addPage();
+          pdf.addImage(imgData, 'PNG', imgX, position, imgWidth * ratio, imgHeight * ratio);
+          heightLeft -= pdfHeight;
+        }
+        
+        pdf.save(`${task.unitRef}_${task.title.replace(/\s+/g, '_')}_${learnerData.name.replace(/\s+/g, '_')}.pdf`);
+        
+        // Clean up
+        document.body.removeChild(tempDiv);
+        showNotification('PDF downloaded successfully!');
+      });
+    }
+
+    // Download all completed tasks as PDF
+    function downloadAllTasksAsPdf() {
+      // Check if there are any saved tasks
+      if (learnerData.tasks.length === 0) {
+        showNotification('No tasks have been saved yet.', 'warning');
+        return;
+      }
+      
+      // Create a temporary div to render the PDF content
+      const tempDiv = document.createElement('div');
+      tempDiv.className = 'p-4';
+      tempDiv.innerHTML = `
+        <div class="mb-4 text-center">
+          <h1>IMI Practical Assessment Tasks</h1>
+          <h3>Learner: ${learnerData.name}</h3>
+          <p>Generated on: ${new Date().toLocaleString()}</p>
+        </div>
+      `;
+      
+      // Sort tasks by ID
+      const sortedTasks = [...learnerData.tasks].sort((a, b) => a.id - b.id);
+      
+      // Add each task
+      sortedTasks.forEach(savedTask => {
+        const task = assessmentTasks.find(t => t.id === savedTask.id);
+        if (!task) return;
+        
+        const taskDiv = document.createElement('div');
+        taskDiv.className = 'mb-5 pb-4 border-bottom';
+        taskDiv.innerHTML = `
+          <div class="mb-4">
+            <h2>${task.title}</h2>
+            <p><strong>Status:</strong> ${savedTask.status === 'completed' ? 'Completed' : savedTask.status === 'in_progress' ? 'In Progress' : 'Not Started'}</p>
+            <p><strong>Last Updated:</strong> ${new Date(savedTask.lastUpdated).toLocaleString()}</p>
+          </div>
+          
+          <div class="mb-4">
+            <h4>Task Details</h4>
+            <p><strong>Customer Request:</strong> ${task.request}</p>
+            <p><strong>Technical Data:</strong> ${task.techData}</p>
+            <p><strong>Description & Recommendations:</strong> ${task.description}</p>
+          </div>
+          
+          <div class="mb-4">
+            <h4>Learner Notes</h4>
+            <p>${savedTask.notes || 'No notes added.'}</p>
+          </div>
+        `;
+        
+        // Add milestones
+        const photoSuggestions = task.photos.split(', ');
+        const milestonesDiv = document.createElement('div');
+        milestonesDiv.innerHTML = '<h4>Photos & Milestone Notes</h4>';
+        
+        savedTask.milestones.forEach((milestone, index) => {
+          const milestoneDiv = document.createElement('div');
+          milestoneDiv.className = 'mb-3 p-3 border rounded';
+          milestoneDiv.innerHTML = `
+            <h5>${photoSuggestions[index]}</h5>
+            <p>${milestone.note || 'No notes added.'}</p>
+            <div class="photo-grid"></div>
+          `;
+          
+          milestonesDiv.appendChild(milestoneDiv);
+          
+          // Add photos
+          const photoGrid = milestoneDiv.querySelector('.photo-grid');
+          if (milestone.photos && milestone.photos.length > 0) {
+            milestone.photos.forEach(photo => {
+              const img = document.createElement('img');
+              img.src = photo;
+              img.style.width = '150px';
+              img.style.height = 'auto';
+              img.style.margin = '5px';
+              photoGrid.appendChild(img);
+            });
+          } else {
+            photoGrid.innerHTML = '<p>No photos added.</p>';
+          }
+        });
+        
+        taskDiv.appendChild(milestonesDiv);
+        tempDiv.appendChild(taskDiv);
+      });
+      
+      // Append to body temporarily (off-screen)
+      tempDiv.style.position = 'fixed';
+      tempDiv.style.top = '-9999px';
+      document.body.appendChild(tempDiv);
+      
+      // Generate PDF
+      const { jsPDF } = window.jspdf;
+      
+      html2canvas(tempDiv, {
+        scale: 1,
+        useCORS: true,
+        allowTaint: true
+      }).then(canvas => {
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        const imgWidth = canvas.width;
+        const imgHeight = canvas.height;
+        const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+        const imgX = (pdfWidth - imgWidth * ratio) / 2;
+        
+        let heightLeft = imgHeight;
+        let position = 0;
+        
+        pdf.addImage(imgData, 'PNG', imgX, position, imgWidth * ratio, imgHeight * ratio);
+        heightLeft -= pdfHeight;
+        
+        while (heightLeft >= 0) {
+          position = heightLeft - imgHeight;
+          pdf.addPage();
+          pdf.addImage(imgData, 'PNG', imgX, position, imgWidth * ratio, imgHeight * ratio);
+          heightLeft -= pdfHeight;
+        }
+        
+        pdf.save(`IMI_Assessment_Tasks_${learnerData.name.replace(/\s+/g, '_')}.pdf`);
+        
+        // Clean up
+        document.body.removeChild(tempDiv);
+        showNotification('All tasks PDF downloaded successfully!');
+      });
+    }
+
+    // Show toast notification
+    function showNotification(message, type = 'success') {
+      const toastEl = document.getElementById('notificationToast');
+      const toastBody = document.getElementById('toastMessage');
+      
+      // Set message
+      toastBody.textContent = message;
+      
+      // Set background color based on type
+      toastEl.className = 'toast';
+      if (type === 'warning') {
+        toastEl.classList.add('bg-warning', 'text-dark');
+      } else if (type === 'error') {
+        toastEl.classList.add('bg-danger', 'text-white');
+      } else {
+        toastEl.classList.add('bg-success', 'text-white');
+      }
+      
+      // Show toast
+      const toast = bootstrap.Toast.getInstance(toastEl) || new bootstrap.Toast(toastEl);
+      toast.show();
+    }
+
+    // Initialize app
+    document.addEventListener('DOMContentLoaded', function() {
+      // Load saved data
+      loadUserData();
+      
+      // Event: Save learner info
+      document.getElementById('saveLearnerInfo').addEventListener('click', function() {
+        const name = document.getElementById('learnerName').value;
+        if (name.trim()) {
+          learnerData.name = name;
+          saveUserData();
+          document.getElementById('savedInfo').style.display = 'inline-block';
+        } else {
+          showNotification('Please enter your name.', 'warning');
+        }
+      });
+      
+      // Event: Save task
+      document.getElementById('saveTask').addEventListener('click', saveTaskData);
+      
+      // Event: Download PDF
+      document.getElementById('downloadPdf').addEventListener('click', downloadTaskAsPdf);
+      
+      // Event: Download All Tasks
+      document.getElementById('downloadAllBtn').addEventListener('click', downloadAllTasksAsPdf);
+    });
+  </script>
+</body>
+</html>
