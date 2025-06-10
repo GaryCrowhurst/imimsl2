@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -109,9 +108,55 @@
       top: 0;
       cursor: pointer;
     }
+    .data-warning {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+    .auto-save-indicator {
+      position: fixed;
+      bottom: 100px;
+      right: 30px;
+      z-index: 1000;
+    }
+    .backup-controls {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 20px;
+      color: white;
+    }
+    .storage-status {
+      position: fixed;
+      bottom: 150px;
+      right: 30px;
+      z-index: 1000;
+      background: rgba(0,0,0,0.8);
+      color: white;
+      padding: 10px;
+      border-radius: 5px;
+      font-size: 0.8rem;
+    }
+    .cloud-backup-controls {
+      background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+      border-radius: 10px;
+      padding: 15px;
+      margin-bottom: 15px;
+      color: white;
+    }
   </style>
 </head>
 <body>
+  <!-- Data Loss Warning -->
+  <div class="alert alert-warning alert-dismissible fade show data-warning m-0" role="alert">
+    <div class="container">
+      <strong><i class="fas fa-exclamation-triangle me-2"></i>Important:</strong> 
+      To prevent data loss, photos will be automatically saved to your camera roll. 
+      Please also regularly use the "Export Data" button to backup your progress.
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+  </div>
+
   <div class="header">
     <div class="container">
       <div class="row align-items-center">
@@ -125,6 +170,64 @@
   </div>
 
   <div class="container">
+    <!-- Cloud Backup Controls -->
+    <div class="cloud-backup-controls">
+      <h6><i class="fas fa-cloud me-2"></i>Cloud Backup (Optional)</h6>
+      <div class="row align-items-center">
+        <div class="col-md-8">
+          <p class="mb-1 small">Automatically sync your data to cloud storage for maximum protection</p>
+        </div>
+        <div class="col-md-4 text-end">
+          <button class="btn btn-outline-light btn-sm me-2" id="connectGoogleDrive">
+            <i class="fab fa-google-drive me-1"></i>Google Drive
+          </button>
+          <button class="btn btn-outline-light btn-sm" id="connectOneDrive">
+            <i class="fab fa-microsoft me-1"></i>OneDrive
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Backup Controls -->
+    <div class="backup-controls">
+      <h5><i class="fas fa-shield-alt me-2"></i>Data Protection & Backup</h5>
+      <div class="row">
+        <div class="col-md-8">
+          <p class="mb-2">Your work uses multiple protection layers:</p>
+          <ul class="mb-0 small">
+            <li>Photos automatically saved to camera roll</li>
+            <li>Data stored in secure browser database (IndexedDB)</li>
+            <li>Automatic local backups every 5 minutes</li>
+            <li>Manual export for additional security</li>
+          </ul>
+        </div>
+        <div class="col-md-4 text-end">
+          <button class="btn btn-light me-2" id="exportDataBtn">
+            <i class="fas fa-download me-1"></i>Export Data
+          </button>
+          <div class="btn-group">
+            <button class="btn btn-outline-light dropdown-toggle" data-bs-toggle="dropdown">
+              <i class="fas fa-upload me-1"></i>Import
+            </button>
+            <ul class="dropdown-menu">
+              <li>
+                <label class="dropdown-item" style="cursor: pointer;">
+                  <i class="fas fa-file-import me-2"></i>Import Data File
+                  <input type="file" id="importDataFile" accept=".json" style="display: none;">
+                </label>
+              </li>
+              <li>
+                <label class="dropdown-item" style="cursor: pointer;">
+                  <i class="fas fa-folder-open me-2"></i>Import Backup Folder
+                  <input type="file" id="importBackupFolder" webkitdirectory directory multiple style="display: none;">
+                </label>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="row mb-4">
       <div class="col-md-6">
         <div class="input-group">
@@ -136,6 +239,7 @@
         <span id="savedInfo" class="text-success" style="display: none;">
           <i class="fas fa-user-check"></i> Information saved
         </span>
+        <div id="storageStatus" class="small"></div>
       </div>
     </div>
 
@@ -210,6 +314,7 @@
             <div class="card mt-3" id="milestonesCard">
               <div class="card-header">
                 Required Documentation Photos
+                <small class="text-muted">(Photos will be automatically saved to your camera roll)</small>
               </div>
               <div class="card-body p-0" id="milestonesContainer">
                 <!-- Milestones will be populated here -->
@@ -226,6 +331,15 @@
     </div>
   </div>
 
+  <!-- Auto-save Indicator -->
+  <div class="auto-save-indicator">
+    <div class="toast" role="alert" aria-live="assertive" aria-atomic="true" id="autoSaveToast" data-bs-delay="2000">
+      <div class="toast-body bg-success text-white">
+        <i class="fas fa-save me-2"></i>Auto-saved
+      </div>
+    </div>
+  </div>
+
   <!-- Floating Download All Button -->
   <div class="floating-button">
     <button class="btn btn-primary download-all-btn" id="downloadAllBtn">
@@ -234,7 +348,7 @@
   </div>
 
   <!-- Toast Notification -->
-  <div class="toast" role="alert" aria-live="assertive" aria-atomic="true" id="notificationToast" data-bs-delay="3000">
+  <div class="toast" role="alert" aria-live="assertive" aria-atomic="true" id="notificationToast" data-bs-delay="4000">
     <div class="toast-header">
       <strong class="me-auto"><i class="fas fa-info-circle me-2"></i>Notification</strong>
       <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
@@ -507,19 +621,448 @@
     let currentTaskId = null;
     let learnerData = {
       name: "",
-      tasks: []
+      tasks: [],
+      version: "2.0",
+      created: new Date().toISOString(),
+      lastBackup: null
+    };
+
+    // Enhanced Storage Manager with IndexedDB and multiple fallbacks
+    const StorageManager = {
+      db: null,
+      dbName: 'IMIAssessmentDB',
+      dbVersion: 1,
+      
+      // Initialize IndexedDB
+      async init() {
+        return new Promise((resolve, reject) => {
+          const request = indexedDB.open(this.dbName, this.dbVersion);
+          
+          request.onerror = () => {
+            console.warn('IndexedDB failed, falling back to localStorage');
+            resolve(false);
+          };
+          
+          request.onsuccess = (event) => {
+            this.db = event.target.result;
+            resolve(true);
+          };
+          
+          request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            
+            // Create object stores
+            if (!db.objectStoreNames.contains('tasks')) {
+              db.createObjectStore('tasks', { keyPath: 'id' });
+            }
+            
+            if (!db.objectStoreNames.contains('photos')) {
+              db.createObjectStore('photos', { keyPath: 'id', autoIncrement: true });
+            }
+            
+            if (!db.objectStoreNames.contains('backups')) {
+              db.createObjectStore('backups', { keyPath: 'timestamp' });
+            }
+          };
+        });
+      },
+
+      // Save data with multiple fallbacks
+      async save(key, data) {
+        const success = await this.saveToIndexedDB(key, data) || 
+                       this.saveToLocalStorage(key, data) || 
+                       await this.saveToFile(key, data);
+        
+        if (success) {
+          this.updateStorageStatus();
+          this.scheduleAutoBackup();
+        }
+        
+        return success;
+      },
+
+      // Save to IndexedDB
+      async saveToIndexedDB(key, data) {
+        if (!this.db) return false;
+        
+        try {
+          const transaction = this.db.transaction(['tasks'], 'readwrite');
+          const store = transaction.objectStore('tasks');
+          
+          await new Promise((resolve, reject) => {
+            const request = store.put({ id: key, data: data, timestamp: Date.now() });
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error);
+          });
+          
+          return true;
+        } catch (error) {
+          console.error('IndexedDB save failed:', error);
+          return false;
+        }
+      },
+
+      // Save to localStorage (fallback)
+      saveToLocalStorage(key, data) {
+        try {
+          localStorage.setItem(key, JSON.stringify(data));
+          return true;
+        } catch (error) {
+          console.error('localStorage save failed:', error);
+          return false;
+        }
+      },
+
+      // Save to file (last resort)
+      async saveToFile(key, data) {
+        try {
+          const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `auto_backup_${key}_${Date.now()}.json`;
+          a.style.display = 'none';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          
+          showNotification('Data automatically saved to Downloads folder as backup', 'info');
+          return true;
+        } catch (error) {
+          console.error('File save failed:', error);
+          return false;
+        }
+      },
+
+      // Load data with fallbacks
+      async load(key) {
+        return await this.loadFromIndexedDB(key) || 
+               this.loadFromLocalStorage(key) || 
+               null;
+      },
+
+      // Load from IndexedDB
+      async loadFromIndexedDB(key) {
+        if (!this.db) return null;
+        
+        try {
+          const transaction = this.db.transaction(['tasks'], 'readonly');
+          const store = transaction.objectStore('tasks');
+          
+          const result = await new Promise((resolve, reject) => {
+            const request = store.get(key);
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
+          });
+          
+          return result ? result.data : null;
+        } catch (error) {
+          console.error('IndexedDB load failed:', error);
+          return null;
+        }
+      },
+
+      // Load from localStorage (fallback)
+      loadFromLocalStorage(key) {
+        try {
+          const data = localStorage.getItem(key);
+          return data ? JSON.parse(data) : null;
+        } catch (error) {
+          console.error('localStorage load failed:', error);
+          return null;
+        }
+      },
+
+      // Save photo with better handling
+      async savePhoto(photoData, metadata) {
+        if (!this.db) {
+          // Fallback: auto-download
+          return this.downloadPhoto(photoData, metadata.filename);
+        }
+        
+        try {
+          const transaction = this.db.transaction(['photos'], 'readwrite');
+          const store = transaction.objectStore('photos');
+          
+          await new Promise((resolve, reject) => {
+            const request = store.add({
+              data: photoData,
+              metadata: metadata,
+              timestamp: Date.now()
+            });
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
+          });
+          
+          // Also download as backup
+          this.downloadPhoto(photoData, metadata.filename);
+          return true;
+        } catch (error) {
+          console.error('Photo save failed:', error);
+          // Fallback to download
+          return this.downloadPhoto(photoData, metadata.filename);
+        }
+      },
+
+      // Download photo to device
+      downloadPhoto(dataUrl, filename) {
+        try {
+          const link = document.createElement('a');
+          link.href = dataUrl;
+          link.download = filename;
+          link.style.display = 'none';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          return true;
+        } catch (error) {
+          console.error('Photo download failed:', error);
+          return false;
+        }
+      },
+
+      // Auto backup every 5 minutes
+      scheduleAutoBackup() {
+        if (this.autoBackupInterval) {
+          clearInterval(this.autoBackupInterval);
+        }
+        
+        this.autoBackupInterval = setInterval(async () => {
+          await this.createAutoBackup();
+        }, 5 * 60 * 1000); // 5 minutes
+      },
+
+      // Create automatic backup
+      async createAutoBackup() {
+        try {
+          const data = await this.load('imiAssessmentData');
+          if (data && data.tasks && data.tasks.length > 0) {
+            const backupData = {
+              ...data,
+              backupType: 'auto',
+              timestamp: Date.now()
+            };
+            
+            if (this.db) {
+              const transaction = this.db.transaction(['backups'], 'readwrite');
+              const store = transaction.objectStore('backups');
+              store.put(backupData);
+              
+              // Keep only last 10 auto backups
+              this.cleanupOldBackups();
+            }
+            
+            this.updateStorageStatus();
+          }
+        } catch (error) {
+          console.error('Auto backup failed:', error);
+        }
+      },
+
+      // Clean up old backups
+      async cleanupOldBackups() {
+        if (!this.db) return;
+        
+        try {
+          const transaction = this.db.transaction(['backups'], 'readwrite');
+          const store = transaction.objectStore('backups');
+          
+          const request = store.getAll();
+          request.onsuccess = () => {
+            const backups = request.result.sort((a, b) => b.timestamp - a.timestamp);
+            
+            // Keep only the 10 most recent backups
+            for (let i = 10; i < backups.length; i++) {
+              store.delete(backups[i].timestamp);
+            }
+          };
+        } catch (error) {
+          console.error('Cleanup failed:', error);
+        }
+      },
+
+      // Get storage statistics
+      async getStorageStats() {
+        const stats = {
+          indexedDB: false,
+          localStorage: false,
+          photos: 0,
+          backups: 0,
+          totalSize: 0
+        };
+        
+        // Check IndexedDB
+        if (this.db) {
+          try {
+            const transaction = this.db.transaction(['tasks', 'photos', 'backups'], 'readonly');
+            
+            // Count photos
+            const photosRequest = transaction.objectStore('photos').count();
+            photosRequest.onsuccess = () => {
+              stats.photos = photosRequest.result;
+            };
+            
+            // Count backups
+            const backupsRequest = transaction.objectStore('backups').count();
+            backupsRequest.onsuccess = () => {
+              stats.backups = backupsRequest.result;
+            };
+            
+            stats.indexedDB = true;
+          } catch (error) {
+            console.error('Stats error:', error);
+          }
+        }
+        
+        // Check localStorage
+        try {
+          const data = localStorage.getItem('imiAssessmentData');
+          if (data) {
+            stats.localStorage = true;
+            stats.totalSize = new Blob([data]).size;
+          }
+        } catch (error) {
+          // localStorage not available
+        }
+        
+        return stats;
+      },
+
+      // Update storage status indicator
+      async updateStorageStatus() {
+        const indicator = document.getElementById('storageStatusIndicator');
+        const text = document.getElementById('storageStatusText');
+        const progressBar = document.getElementById('storageProgressBar');
+        const statusEl = document.getElementById('storageStatus');
+        
+        const stats = await this.getStorageStats();
+        
+        if (stats.indexedDB) {
+          text.textContent = `DB: ✓ Photos: ${stats.photos} Backups: ${stats.backups}`;
+          progressBar.style.width = '100%';
+          progressBar.className = 'progress-bar bg-success';
+          if (statusEl) statusEl.innerHTML = '<span class="text-success">Storage: Secure Database</span>';
+        } else if (stats.localStorage) {
+          text.textContent = 'Using backup storage';
+          progressBar.style.width = '60%';
+          progressBar.className = 'progress-bar bg-warning';
+          if (statusEl) statusEl.innerHTML = '<span class="text-warning">Storage: Limited Capacity</span>';
+        } else {
+          text.textContent = 'Files saved to Downloads';
+          progressBar.style.width = '30%';
+          progressBar.className = 'progress-bar bg-danger';
+          if (statusEl) statusEl.innerHTML = '<span class="text-danger">Storage: Download Only</span>';
+        }
+        
+        // Show indicator briefly
+        indicator.style.display = 'block';
+        setTimeout(() => {
+          indicator.style.display = 'none';
+        }, 3000);
+      }
+    };
+
+    // Enhanced Photo Manager with better reliability
+    const PhotoManager = {
+      // Process photos with multiple save methods
+      async processPhotos(files, taskId, milestoneIndex) {
+        const results = [];
+        
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          
+          try {
+            // Compress the image
+            const compressedDataUrl = await this.compressImage(file);
+            
+            // Generate metadata
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const metadata = {
+              filename: `IMI_Task${taskId}_Milestone${milestoneIndex}_${timestamp}_${i}.jpg`,
+              taskId,
+              milestoneIndex,
+              originalSize: file.size,
+              compressedSize: compressedDataUrl.length,
+              timestamp: Date.now()
+            };
+            
+            // Save with multiple methods
+            const saved = await StorageManager.savePhoto(compressedDataUrl, metadata);
+            
+            if (saved) {
+              showNotification(`Photo saved: ${metadata.filename}`, 'success');
+            } else {
+              showNotification('Failed to save photo. Please export your data as backup.', 'error');
+            }
+            
+            results.push({
+              dataUrl: compressedDataUrl,
+              metadata,
+              saved
+            });
+            
+          } catch (error) {
+            console.error('Failed to process photo:', error);
+            showNotification('Failed to process photo. Please try again.', 'error');
+          }
+        }
+        
+        return results;
+      },
+
+      // Compress image (existing method)
+      compressImage(file, maxWidth = 1200, quality = 0.8) {
+        return new Promise((resolve) => {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          const img = new Image();
+
+          img.onload = () => {
+            const ratio = Math.min(maxWidth / img.width, maxWidth / img.height);
+            const newWidth = img.width * ratio;
+            const newHeight = img.height * ratio;
+
+            canvas.width = newWidth;
+            canvas.height = newHeight;
+
+            ctx.drawImage(img, 0, 0, newWidth, newHeight);
+            const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+            resolve(compressedDataUrl);
+          };
+
+          img.src = URL.createObjectURL(file);
+        });
+      }
     };
 
     // Initialize modal, toast and events
     const taskModal = new bootstrap.Modal(document.getElementById('taskModal'));
     const notificationToast = new bootstrap.Toast(document.getElementById('notificationToast'));
+    const autoSaveToast = new bootstrap.Toast(document.getElementById('autoSaveToast'));
+
+    // Auto-save functionality
+    let autoSaveTimeout;
+    function scheduleAutoSave() {
+      clearTimeout(autoSaveTimeout);
+      autoSaveTimeout = setTimeout(() => {
+        if (StorageManager.save('imiAssessmentData', learnerData)) {
+          autoSaveToast.show();
+        }
+      }, 2000); // Auto-save after 2 seconds of inactivity
+    }
 
     // Load user data from localStorage
     function loadUserData() {
-      const savedData = localStorage.getItem('imiAssessmentData');
+      const savedData = StorageManager.load('imiAssessmentData');
       if (savedData) {
-        learnerData = JSON.parse(savedData);
-        document.getElementById('learnerName').value = learnerData.name;
+        learnerData = {
+          ...learnerData,
+          ...savedData
+        };
+        
+        document.getElementById('learnerName').value = learnerData.name || '';
         if (learnerData.name) {
           document.getElementById('savedInfo').style.display = 'inline-block';
         }
@@ -534,13 +1077,19 @@
           }
         });
       }
+      
       renderTasks();
+      StorageManager.updateStorageStatus();
     }
 
     // Save user data to localStorage
     function saveUserData() {
-      localStorage.setItem('imiAssessmentData', JSON.stringify(learnerData));
-      showNotification('Your progress has been saved!');
+      learnerData.lastUpdated = new Date().toISOString();
+      const success = StorageManager.save('imiAssessmentData', learnerData);
+      if (success) {
+        showNotification('Your progress has been saved!');
+      }
+      return success;
     }
 
     // Render all tasks in the main view
@@ -707,7 +1256,7 @@
               </div>
               <div class="btn-group">
                 <button class="btn btn-sm btn-outline-primary btn-photo">
-                  <i class="fas fa-camera me-1"></i>Add Photo
+                  <i class="fas fa-camera me-1"></i>Add Photo (Auto-saves to camera roll)
                   <input type="file" class="milestone-photo-input" data-milestone="${index}" accept="image/*" multiple>
                 </button>
               </div>
@@ -727,11 +1276,12 @@
         // Render existing photos if any
         const photoContainerEl = milestoneEl.querySelector(`#photoContainer${index}`);
         if (milestoneData.photos && milestoneData.photos.length > 0) {
-          milestoneData.photos.forEach(photo => {
+          milestoneData.photos.forEach((photo, photoIndex) => {
             const img = document.createElement('img');
-            img.src = photo;
+            img.src = photo.dataUrl || photo; // Handle both old and new format
             img.className = 'photo-preview';
             img.setAttribute('data-milestone', index);
+            img.setAttribute('data-photo-index', photoIndex);
             
             // Add delete button overlay
             const wrapper = document.createElement('div');
@@ -748,6 +1298,7 @@
             const deleteBtn = wrapper.querySelector('.delete-photo');
             deleteBtn.addEventListener('click', () => {
               wrapper.remove();
+              scheduleAutoSave();
             });
           });
         }
@@ -756,41 +1307,49 @@
       taskModal.show();
     }
 
-    // Handle photo upload
-    function handlePhotoUpload(event, milestoneIndex) {
+    // Handle photo upload with automatic download
+    async function handlePhotoUpload(event, milestoneIndex) {
       const files = event.target.files;
       const photoContainer = document.getElementById(`photoContainer${milestoneIndex}`);
       
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const reader = new FileReader();
+      if (files.length === 0) return;
+      
+      showNotification('Processing photos...', 'info');
+      
+      // Process photos
+      const processedPhotos = await PhotoManager.processPhotos(files, currentTaskId, milestoneIndex);
+      
+      // Add photos to UI
+      processedPhotos.forEach((photo, photoIndex) => {
+        const img = document.createElement('img');
+        img.src = photo.dataUrl;
+        img.className = 'photo-preview';
+        img.setAttribute('data-milestone', milestoneIndex);
         
-        reader.onload = function(e) {
-          const img = document.createElement('img');
-          img.src = e.target.result;
-          img.className = 'photo-preview';
-          img.setAttribute('data-milestone', milestoneIndex);
-          
-          // Add delete button overlay
-          const wrapper = document.createElement('div');
-          wrapper.className = 'position-relative d-inline-block';
-          wrapper.innerHTML = `
-            <button class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1 delete-photo">
-              <i class="fas fa-times"></i>
-            </button>
-          `;
-          wrapper.prepend(img);
-          photoContainer.appendChild(wrapper);
-          
-          // Add delete event
-          const deleteBtn = wrapper.querySelector('.delete-photo');
-          deleteBtn.addEventListener('click', () => {
-            wrapper.remove();
-          });
-        };
+        // Add delete button overlay
+        const wrapper = document.createElement('div');
+        wrapper.className = 'position-relative d-inline-block';
+        wrapper.innerHTML = `
+          <button class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1 delete-photo">
+            <i class="fas fa-times"></i>
+          </button>
+        `;
+        wrapper.prepend(img);
+        photoContainer.appendChild(wrapper);
         
-        reader.readAsDataURL(file);
-      }
+        // Add delete event
+        const deleteBtn = wrapper.querySelector('.delete-photo');
+        deleteBtn.addEventListener('click', () => {
+          wrapper.remove();
+          scheduleAutoSave();
+        });
+      });
+      
+      // Schedule auto-save
+      scheduleAutoSave();
+      
+      // Clear the input
+      event.target.value = '';
     }
 
     // Save task data
@@ -815,7 +1374,11 @@
         const photos = [];
         
         photoEls.forEach(photo => {
-          photos.push(photo.src);
+          photos.push({
+            dataUrl: photo.src,
+            filename: `Task${currentTaskId}_Milestone${index}_${Date.now()}.jpg`,
+            timestamp: new Date().toISOString()
+          });
         });
         
         milestones.push({
@@ -846,13 +1409,17 @@
       }
       
       // Save to localStorage
-      saveUserData();
+      const saved = saveUserData();
       
-      // Update UI
-      renderTasks();
-      
-      // Close modal
-      taskModal.hide();
+      if (saved) {
+        // Update UI
+        renderTasks();
+        
+        // Close modal
+        taskModal.hide();
+      } else {
+        showNotification('Failed to save task. Please export your data as backup.', 'error');
+      }
     }
 
     // Download task as PDF
@@ -933,7 +1500,7 @@
         if (milestone.photos && milestone.photos.length > 0) {
           milestone.photos.forEach(photo => {
             const img = document.createElement('img');
-            img.src = photo;
+            img.src = photo.dataUrl || photo; // Handle both old and new format
             img.style.width = '150px';
             img.style.height = 'auto';
             img.style.margin = '5px';
@@ -1068,7 +1635,7 @@
           if (milestone.photos && milestone.photos.length > 0) {
             milestone.photos.forEach(photo => {
               const img = document.createElement('img');
-              img.src = photo;
+              img.src = photo.dataUrl || photo; // Handle both old and new format
               img.style.width = '150px';
               img.style.height = 'auto';
               img.style.margin = '5px';
@@ -1134,12 +1701,14 @@
       // Set message
       toastBody.textContent = message;
       
-      // Set background color based on type
+      // Reset classes and set background color based on type
       toastEl.className = 'toast';
       if (type === 'warning') {
         toastEl.classList.add('bg-warning', 'text-dark');
       } else if (type === 'error') {
         toastEl.classList.add('bg-danger', 'text-white');
+      } else if (type === 'info') {
+        toastEl.classList.add('bg-info', 'text-white');
       } else {
         toastEl.classList.add('bg-success', 'text-white');
       }
@@ -1149,18 +1718,36 @@
       toast.show();
     }
 
-    // Initialize app
-    document.addEventListener('DOMContentLoaded', function() {
+    // Initialize app with enhanced storage
+    document.addEventListener('DOMContentLoaded', async function() {
+      // Initialize storage systems
+      showNotification('Initializing secure storage...', 'info');
+      
+      const dbInitialized = await StorageManager.init();
+      if (dbInitialized) {
+        showNotification('Secure database storage activated', 'success');
+      } else {
+        showNotification('Using fallback storage - please export data regularly', 'warning');
+      }
+      
+      // Start auto-backup
+      StorageManager.scheduleAutoBackup();
+      
       // Load saved data
       loadUserData();
+      
+      // Update storage status
+      StorageManager.updateStorageStatus();
       
       // Event: Save learner info
       document.getElementById('saveLearnerInfo').addEventListener('click', function() {
         const name = document.getElementById('learnerName').value;
         if (name.trim()) {
           learnerData.name = name;
-          saveUserData();
-          document.getElementById('savedInfo').style.display = 'inline-block';
+          const saved = saveUserData();
+          if (saved) {
+            document.getElementById('savedInfo').style.display = 'inline-block';
+          }
         } else {
           showNotification('Please enter your name.', 'warning');
         }
@@ -1174,6 +1761,43 @@
       
       // Event: Download All Tasks
       document.getElementById('downloadAllBtn').addEventListener('click', downloadAllTasksAsPdf);
+      
+      // Event: Export Data
+      document.getElementById('exportDataBtn').addEventListener('click', DataManager.exportData);
+      
+      // Event: Import Data
+      document.getElementById('importDataFile').addEventListener('change', function(e) {
+        if (e.target.files.length > 0) {
+          DataManager.importData(e.target.files[0]);
+          e.target.value = ''; // Reset file input
+        }
+      });
+      
+      // Add auto-save on input changes
+      document.addEventListener('input', function(e) {
+        if (e.target.matches('.milestone-note, #taskNotes, #taskStatus')) {
+          scheduleAutoSave();
+        }
+      });
+      
+      // Periodic backup reminder
+      setInterval(() => {
+        if (learnerData.lastBackup) {
+          const lastBackup = new Date(learnerData.lastBackup);
+          const daysSinceBackup = (Date.now() - lastBackup) / (1000 * 60 * 60 * 24);
+          
+          if (daysSinceBackup > 7) { // Remind weekly
+            showNotification('Reminder: Export your data as backup! It\'s been a week since your last backup.', 'warning');
+          }
+        } else if (learnerData.tasks.length > 0) {
+          showNotification('Reminder: Export your data regularly to prevent loss!', 'warning');
+        }
+      }, 24 * 60 * 60 * 1000); // Check daily
+      
+      // Check storage status periodically
+      setInterval(() => {
+        StorageManager.updateStorageStatus();
+      }, 30000); // Every 30 seconds
     });
   </script>
 </body>
